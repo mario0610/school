@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS 定位模擬器</title>
+    <!-- 一定要最先載入，才能在其他程式用到定位之前把它換掉 -->
+    <script src="geo-mock.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <style>
+        :root {
+            --bg: #f5f6f8;
+            --card: #ffffff;
+            --text: #1d2330;
+            --muted: #667085;
+            --border: #d9dde5;
+            --accent: #2563eb;
+            --accent-text: #ffffff;
+            --ok: #15803d;
+            --off: #b45309;
+            --error: #b91c1c;
+            --log-bg: #f0f2f5;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #11141a;
+                --card: #1b2029;
+                --text: #e6e8ec;
+                --muted: #9aa3b2;
+                --border: #2f3644;
+                --accent: #4f8cff;
+                --accent-text: #0b1220;
+                --ok: #4ade80;
+                --off: #fbbf24;
+                --error: #f87171;
+                --log-bg: #141820;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+            line-height: 1.5;
+        }
+        header { padding: 20px 16px 8px; max-width: 1200px; margin: 0 auto; }
+        h1 { margin: 0 0 4px; font-size: 1.5rem; }
+        header p { margin: 0; color: var(--muted); }
+        main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 380px;
+            gap: 16px;
+            padding: 12px 16px 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        @media (max-width: 860px) {
+            main { grid-template-columns: minmax(0, 1fr); }
+            #map { position: relative; top: 0; height: 55vh; }
+        }
+        #map {
+            position: sticky;
+            top: 16px;
+            align-self: start;
+            height: min(80vh, 720px);
+            min-height: 320px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            text-align: center;
+            padding: 0;
+        }
+        .panel { display: flex; flex-direction: column; gap: 12px; }
+        section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        h2 { margin: 0 0 10px; font-size: 1rem; }
+        label { display: block; font-size: 0.85rem; color: var(--muted); }
+        input[type="number"], select {
+            width: 100%;
+            margin-top: 2px;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text);
+            font: inherit;
+        }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        button {
+            padding: 7px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
+            color: var(--text);
+            font: inherit;
+            cursor: pointer;
+        }
+        button:hover { border-color: var(--accent); }
+        button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+        .chip { padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; }
+        .switch { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 1rem; cursor: pointer; }
+        .switch input { width: 18px; height: 18px; }
+        .status { margin: 8px 0 0; font-size: 0.85rem; }
+        .status.on { color: var(--ok); }
+        .status.off { color: var(--off); }
+        #log {
+            margin: 10px 0 0;
+            padding: 8px;
+            height: 200px;
+            overflow: auto;
+            background: var(--log-bg);
+            border-radius: 8px;
+            font: 0.8rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        #log .err { color: var(--error); }
+        pre.code {
+            margin: 0;
+            padding: 8px;
+            background: var(--log-bg);
+            border-radius: 8px;
+            font: 0.8rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-x: auto;
+        }
+        .hint { margin: 8px 0 0; font-size: 0.85rem; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>GPS 定位模擬器</h1>
+        <p>點地圖或拖曳標記來設定假位置。只會影響有載入 geo-mock.js 的網頁，不會改到裝置真正的 GPS。</p>
+    </header>
+
+    <main>
+        <div id="map">地圖載入中…</div>
+
+        <div class="panel">
+            <section>
+                <label class="switch">
+                    <input type="checkbox" id="enabled">
+                    啟用模擬定位
+                </label>
+                <p class="status" id="status"></p>
+            </section>
+
+            <section>
+                <h2>位置</h2>
+                <form id="coords-form">
+                    <div class="grid2">
+                        <label>緯度 latitude
+                            <input type="number" id="lat" step="any" min="-90" max="90" required>
+                        </label>
+                        <label>經度 longitude
+                            <input type="number" id="lng" step="any" min="-180" max="180" required>
+                        </label>
+                    </div>
+                    <label style="margin-top: 8px;">精確度 accuracy（公尺）
+                        <input type="number" id="accuracy" step="any" min="1" required>
+                    </label>
+                    <div class="row">
+                        <button type="submit" class="primary">設定位置</button>
+                        <button type="button" id="use-real">使用我的真實位置</button>
+                    </div>
+                </form>
+                <div class="row" id="presets"></div>
+            </section>
+
+            <section>
+                <h2>模擬錯誤</h2>
+                <select id="error">
+                    <option value="0">不模擬錯誤（正常回傳位置）</option>
+                    <option value="1">1 PERMISSION_DENIED：使用者拒絕</option>
+                    <option value="2">2 POSITION_UNAVAILABLE：無法取得位置</option>
+                    <option value="3">3 TIMEOUT：逾時</option>
+                </select>
+            </section>
+
+            <section>
+                <h2>測試</h2>
+                <div class="row" style="margin-top: 0;">
+                    <button type="button" id="test-get">getCurrentPosition</button>
+                    <button type="button" id="test-watch">開始 watchPosition</button>
+                    <button type="button" id="clear-log">清除紀錄</button>
+                </div>
+                <div id="log" aria-live="polite"></div>
+            </section>
+
+            <section>
+                <h2>用在自己的網頁</h2>
+                <pre class="code">&lt;script src="geo-mock.js"&gt;&lt;/script&gt;</pre>
+                <p class="hint">放在 &lt;head&gt; 最前面，比其他 script 先載入。同一個網站開著這個控制面板時，改位置會即時同步到其他分頁。範例：<a href="example.html" target="_blank">example.html</a></p>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
