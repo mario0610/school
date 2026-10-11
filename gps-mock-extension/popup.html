@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>GPS 定位模擬</title>
+    <link rel="stylesheet" href="lib/leaflet/leaflet.css">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --field: #f5f6f8;
+            --text: #1d2330;
+            --muted: #667085;
+            --border: #d9dde5;
+            --accent: #2563eb;
+            --accent-text: #ffffff;
+            --ok: #15803d;
+            --off: #b45309;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1b2029;
+                --field: #11141a;
+                --text: #e6e8ec;
+                --muted: #9aa3b2;
+                --border: #2f3644;
+                --accent: #4f8cff;
+                --accent-text: #0b1220;
+                --ok: #4ade80;
+                --off: #fbbf24;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            width: 340px;
+            margin: 0;
+            padding: 12px;
+            background: var(--bg);
+            color: var(--text);
+            font: 13px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        }
+        .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        h1 { margin: 0; font-size: 15px; }
+        .status { margin: 2px 0 10px; font-size: 12px; }
+        .status.on { color: var(--ok); }
+        .status.off { color: var(--off); }
+
+        /* 開關 */
+        .switch { position: relative; width: 40px; height: 22px; flex: none; }
+        .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+        .switch span {
+            position: absolute; inset: 0; border-radius: 999px;
+            background: var(--border); transition: background 0.15s; pointer-events: none;
+        }
+        .switch span::after {
+            content: ""; position: absolute; top: 3px; left: 3px;
+            width: 16px; height: 16px; border-radius: 50%; background: #fff;
+            transition: transform 0.15s;
+        }
+        .switch input:checked + span { background: var(--accent); }
+        .switch input:checked + span::after { transform: translateX(18px); }
+        .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        #map {
+            height: 200px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--muted); text-align: center;
+        }
+        label { display: block; font-size: 12px; color: var(--muted); }
+        input[type="number"], select {
+            width: 100%;
+            margin-top: 2px;
+            padding: 5px 7px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--field);
+            color: var(--text);
+            font: inherit;
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 70px; gap: 6px; margin-top: 10px; align-items: end; }
+        .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        button {
+            padding: 5px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--field);
+            color: var(--text);
+            font: inherit;
+            cursor: pointer;
+        }
+        button:hover { border-color: var(--accent); }
+        button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+        .chip { padding: 2px 9px; border-radius: 999px; font-size: 12px; }
+        .section { margin-top: 10px; }
+        .hint { margin: 10px 0 0; font-size: 11px; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <div class="top">
+        <h1>GPS 定位模擬</h1>
+        <label class="switch" title="啟用模擬定位">
+            <input type="checkbox" id="enabled" aria-label="啟用模擬定位">
+            <span></span>
+        </label>
+    </div>
+    <p class="status" id="status"></p>
+
+    <div id="map">地圖載入中…</div>
+
+    <form id="coords-form">
+        <div class="grid">
+            <label>緯度
+                <input type="number" id="lat" step="any" min="-90" max="90" required>
+            </label>
+            <label>經度
+                <input type="number" id="lng" step="any" min="-180" max="180" required>
+            </label>
+            <label>精確度(m)
+                <input type="number" id="accuracy" step="any" min="1" required>
+            </label>
+        </div>
+        <div class="row">
+            <button type="submit" class="primary">設定位置</button>
+        </div>
+    </form>
+    <div class="row" id="presets"></div>
+
+    <div class="section">
+        <label>模擬錯誤
+            <select id="error">
+                <option value="0">不模擬錯誤（正常回傳位置）</option>
+                <option value="1">1 PERMISSION_DENIED：使用者拒絕</option>
+                <option value="2">2 POSITION_UNAVAILABLE：無法取得位置</option>
+                <option value="3">3 TIMEOUT：逾時</option>
+            </select>
+        </label>
+    </div>
+
+    <p class="hint">點地圖或拖曳標記來改位置，所有分頁會即時更新。剛安裝時，之前就開著的分頁要重新整理一次才會生效。</p>
+
+    <script src="lib/leaflet/leaflet.js"></script>
+    <script src="shared.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

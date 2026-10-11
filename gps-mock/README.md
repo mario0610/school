@@ -34,3 +34,7 @@ GeoMock.reset()             // 回到預設（台北 101）
 ```
 
 地圖使用 [Leaflet](https://leafletjs.com/) 和 OpenStreetMap，需要網路；沒網路時還是可以直接輸入經緯度。
+
+## Chrome 擴充功能版
+
+不想在每個網頁加 script 的話，可以改用 [`gps-mock-extension`](../gps-mock-extension/)，裝好之後所有分頁都有效。
